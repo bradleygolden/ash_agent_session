@@ -5,7 +5,9 @@ defmodule AshAgentSession.Verifiers.RequireAgentBlock do
 
   use Spark.Dsl.Verifier
 
+  alias Spark.Dsl.Transformer
   alias Spark.Dsl.Verifier
+  alias Spark.Error.DslError
 
   @impl true
   def verify(dsl_state) do
@@ -15,7 +17,7 @@ defmodule AshAgentSession.Verifiers.RequireAgentBlock do
       :ok
     else
       {:error,
-       Spark.Error.DslError.exception(
+       DslError.exception(
          module: module,
          path: [:agent_session],
          message: """
@@ -35,7 +37,7 @@ defmodule AshAgentSession.Verifiers.RequireAgentBlock do
   end
 
   defp has_agent_block?(dsl_state) do
-    case Spark.Dsl.Transformer.get_option(dsl_state, [:agent], :client) do
+    case Transformer.get_option(dsl_state, [:agent], :client) do
       nil -> false
       _ -> true
     end

@@ -19,9 +19,8 @@ defmodule AshAgentSession.Transformers.AddSessionActions do
   @impl true
   def transform(dsl_state) do
     with {:ok, dsl_state} <- add_start_session_action(dsl_state),
-         {:ok, dsl_state} <- add_continue_session_action(dsl_state),
-         {:ok, dsl_state} <- add_get_context_action(dsl_state) do
-      {:ok, dsl_state}
+         {:ok, dsl_state} <- add_continue_session_action(dsl_state) do
+      add_get_context_action(dsl_state)
     end
   end
 
