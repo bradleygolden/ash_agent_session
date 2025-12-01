@@ -15,7 +15,7 @@ defmodule AshAgentSession.Actions.GetContextRun do
     opts = [domain: domain]
 
     opts =
-      if actor = context[:actor] do
+      if actor = context.actor do
         Keyword.put(opts, :actor, actor)
       else
         opts

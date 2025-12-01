@@ -68,6 +68,7 @@ defmodule AshAgentSession.Transformers.AddSessionActions do
         }
       ],
       manual: {AshAgentSession.Actions.ContinueSession, []},
+      require_atomic?: false,
       primary?: false,
       accept: []
     }

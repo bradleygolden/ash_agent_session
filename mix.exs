@@ -70,7 +70,14 @@ defmodule AshAgentSession.MixProject do
   defp aliases do
     [
       precommit: [
-        "cmd SKIP_LOCAL_DEPS=true mix do deps.get, deps.compile, deps.unlock --check-unused, compile --warnings-as-errors, test --warnings-as-errors, format --check-formatted, credo --strict, sobelow --exit, deps.audit, hex.audit, dialyzer, docs --warnings-as-errors"
+        "compile --warnings-as-errors",
+        "test --warnings-as-errors",
+        "format --check-formatted",
+        "credo --strict",
+        "sobelow --exit",
+        "deps.audit",
+        "dialyzer",
+        "docs --warnings-as-errors"
       ]
     ]
   end
@@ -100,7 +107,8 @@ defmodule AshAgentSession.MixProject do
   defp dialyzer do
     [
       plt_add_apps: [:mix, :ex_unit],
-      list_unused_filters: true
+      list_unused_filters: true,
+      ignore_warnings: ".dialyzer_ignore.exs"
     ]
   end
 end

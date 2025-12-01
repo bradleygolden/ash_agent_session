@@ -2,11 +2,8 @@ import Config
 
 config :ash, :validate_domain_resource_inclusion?, false
 
-config :ash_baml,
-  clients: [
-    test: {AshBaml.Test.BamlClient, baml_src: "../ash_baml/test/support/fixtures/baml_src"},
-    thinking: {AshAgent.Test.ThinkingBamlClient, []},
-    ollama_live: {AshAgent.Test.OllamaLiveClient, []}
-  ]
+System.put_env("ANTHROPIC_API_KEY", "test-key-12345")
+
+config :ash_agent, :req_llm_options, req_http_options: [plug: {Req.Test, AshAgentSession.LLMStub}]
 
 config :logger, level: :error

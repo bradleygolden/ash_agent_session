@@ -21,10 +21,12 @@ defmodule AshAgentSession.Actions.StartSession do
       {:ok, result} ->
         serialized = ContextSerializer.to_map(result.context)
 
-        changeset
-        |> Ash.Changeset.force_change_attribute(context_attr, serialized)
-        |> Ash.Changeset.set_context(%{agent_result: result})
-        |> Ash.create(return_notifications?: true)
+        changeset =
+          changeset
+          |> Ash.Changeset.force_change_attribute(context_attr, serialized)
+          |> Ash.Changeset.set_context(%{agent_result: result})
+
+        Ash.DataLayer.create(resource, changeset)
 
       {:error, error} ->
         {:error, error}
@@ -32,29 +34,52 @@ defmodule AshAgentSession.Actions.StartSession do
   end
 
   defp build_initial_messages(resource, input, instruction_args) do
-    messages = []
+    config = AshAgent.Info.agent_config(resource)
+
+    system_prompt = get_system_prompt(config, instruction_args)
 
     messages =
-      if instruction_args do
-        [AshAgent.Message.system(render_instruction(resource, instruction_args)) | messages]
-      else
-        messages
+      case system_prompt do
+        nil -> []
+        prompt -> [AshAgent.Message.system(prompt)]
       end
 
     messages ++ [AshAgent.Message.user(input)]
   end
 
-  defp render_instruction(resource, args) do
-    config = AshAgent.Info.agent_config(resource)
-
+  defp get_system_prompt(config, instruction_args) do
     case config.instruction do
       nil ->
-        ""
+        nil
 
       template ->
-        {:ok, rendered} = Solid.render(template, args)
-        IO.iodata_to_binary(rendered)
+        args = instruction_args || %{}
+        render_template(template, args)
     end
+  end
+
+  defp render_template(template, args) when is_binary(template) do
+    context = build_template_context(args)
+
+    with {:ok, parsed} <- Solid.parse(template),
+         {:ok, rendered} <- Solid.render(parsed, context, []) do
+      IO.iodata_to_binary(rendered)
+    else
+      _ -> template
+    end
+  end
+
+  defp render_template(template, args) when is_struct(template, Solid.Template) do
+    context = build_template_context(args)
+
+    case Solid.render(template, context, []) do
+      {:ok, rendered} -> IO.iodata_to_binary(rendered)
+      {:error, _, _} -> ""
+    end
+  end
+
+  defp build_template_context(args) when is_map(args) do
+    Map.new(args, fn {k, v} -> {to_string(k), v} end)
   end
 
   defp call_agent(resource, _domain, agent_context, _context) do

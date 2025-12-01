@@ -20,10 +20,12 @@ defmodule AshAgentSession.Actions.ContinueSession do
          {:ok, result} <- call_agent(resource, domain, updated_context, context) do
       serialized = ContextSerializer.to_map(result.context)
 
-      changeset
-      |> Ash.Changeset.force_change_attribute(context_attr, serialized)
-      |> Ash.Changeset.set_context(%{agent_result: result})
-      |> Ash.update(return_notifications?: true)
+      changeset =
+        changeset
+        |> Ash.Changeset.force_change_attribute(context_attr, serialized)
+        |> Ash.Changeset.set_context(%{agent_result: result})
+
+      Ash.DataLayer.update(resource, changeset)
     end
   end
 
