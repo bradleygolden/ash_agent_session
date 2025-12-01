@@ -1,5 +1,6 @@
 defmodule AshAgentSession.Test.SessionAgent do
   @moduledoc false
+  @dialyzer :no_match
 
   use Ash.Resource,
     domain: AshAgentSession.TestDomain,
@@ -33,6 +34,7 @@ end
 
 defmodule AshAgentSession.Test.SessionAgentWithTemplate do
   @moduledoc false
+  @dialyzer :no_match
 
   use Ash.Resource,
     domain: AshAgentSession.TestDomain,
