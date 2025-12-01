@@ -38,35 +38,33 @@ defmodule AshAgentSession.MixProject do
     [
       {:ash, "~> 3.0"},
       {:spark, "~> 2.2"},
-      {:ash_agent, ash_agent_dep()},
+      ash_agent_dep(),
       {:ex_doc, "~> 0.34", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:sobelow, "~> 0.13", only: [:dev, :test], runtime: false},
+      {:sourceror, "~> 1.7", runtime: false},
       {:plug, "~> 1.16", only: :test}
     ]
   end
 
   defp ash_agent_dep do
-    if hex_build?() do
-      "~> 0.3"
+    if skip_local_deps?() do
+      {:ash_agent, "~> 0.3"}
     else
-      if local_dep?(:ash_agent) do
-        [in_umbrella: true]
-      else
-        "~> 0.3"
-      end
+      local_dep_or_hex(:ash_agent, "~> 0.3", "../ash_agent")
     end
   end
 
-  defp hex_build?, do: System.get_env("HEX_BUILD") == "true"
-
-  defp local_dep?(app) do
-    app
-    |> to_string()
-    |> then(&Path.expand("../#{&1}/mix.exs", __DIR__))
-    |> File.exists?()
+  defp local_dep_or_hex(dep, version, path) do
+    if File.exists?(Path.expand("#{path}/mix.exs", __DIR__)) do
+      {dep, path: path}
+    else
+      {dep, version}
+    end
   end
+
+  defp skip_local_deps?, do: System.get_env("SKIP_LOCAL_DEPS") == "true"
 
   defp aliases do
     [
@@ -106,7 +104,7 @@ defmodule AshAgentSession.MixProject do
       main: "readme",
       source_ref: "v#{@version}",
       source_url: @source_url,
-      extras: ["README.md"]
+      extras: ["README.md", "LICENSE"]
     ]
   end
 
