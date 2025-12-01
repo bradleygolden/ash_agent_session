@@ -48,12 +48,18 @@ defmodule AshAgentSession.MixProject do
   end
 
   defp ash_agent_dep do
-    if local_dep?(:ash_agent) do
-      [in_umbrella: true]
+    if hex_build?() do
+      "~> 0.3"
     else
-      [version: "~> 0.1.0"]
+      if local_dep?(:ash_agent) do
+        [in_umbrella: true]
+      else
+        "~> 0.3"
+      end
     end
   end
+
+  defp hex_build?, do: System.get_env("HEX_BUILD") == "true"
 
   defp local_dep?(app) do
     app
