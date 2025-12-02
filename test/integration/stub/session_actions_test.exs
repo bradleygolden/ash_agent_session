@@ -1,7 +1,6 @@
-defmodule AshAgentSession.Integration.SessionActionsTest do
-  use ExUnit.Case, async: true
-
-  @moduletag :integration
+defmodule AshAgentSession.Integration.Stub.SessionActionsTest do
+  @moduledoc false
+  use AshAgentSession.IntegrationCase
 
   alias AshAgentSession.LLMStub
   alias AshAgentSession.Test.SessionAgent
