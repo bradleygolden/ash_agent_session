@@ -74,3 +74,39 @@ defmodule AshAgentSession.Test.SessionAgentWithTemplate do
     context_attribute :context
   end
 end
+
+defmodule AshAgentSession.Test.SessionAgentWithStatus do
+  @moduledoc false
+  @dialyzer :no_match
+
+  use Ash.Resource,
+    domain: AshAgentSession.TestDomain,
+    data_layer: Ash.DataLayer.Ets,
+    extensions: [AshAgent.Resource, AshAgentSession.Resource]
+
+  ets do
+    private? true
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :context, :map, public?: true
+    attribute :status, :atom, default: :pending, public?: true
+  end
+
+  actions do
+    defaults [:read]
+  end
+
+  agent do
+    client("anthropic:claude-3-5-sonnet")
+    instruction("You are a helpful assistant.")
+    input_schema(Zoi.object(%{message: Zoi.string()}, coerce: true))
+    output_schema(Zoi.object(%{reply: Zoi.string()}, coerce: true))
+  end
+
+  agent_session do
+    context_attribute :context
+    status_attribute(:status)
+  end
+end
