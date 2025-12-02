@@ -129,4 +129,133 @@ defmodule AshAgentSession.ContextSerializerTest do
       end
     end
   end
+
+  describe "streaming_assistant_message/0" do
+    test "creates a placeholder message with streaming metadata" do
+      msg = ContextSerializer.streaming_assistant_message()
+
+      assert %Message{} = msg
+      assert msg.role == :assistant
+      assert msg.content == nil
+      assert msg.metadata.streaming == true
+      assert msg.metadata.streaming_content == ""
+      assert msg.metadata.streaming_thinking == ""
+    end
+  end
+
+  describe "update_streaming_content/3" do
+    test "accumulates content delta" do
+      msg = ContextSerializer.streaming_assistant_message()
+      ctx = Context.new([Message.user("Hello"), msg])
+
+      ctx = ContextSerializer.update_streaming_content(ctx, "Hi ")
+      ctx = ContextSerializer.update_streaming_content(ctx, "there!")
+
+      last_msg = List.last(ctx.messages)
+      assert last_msg.metadata.streaming_content == "Hi there!"
+    end
+
+    test "accumulates thinking delta" do
+      msg = ContextSerializer.streaming_assistant_message()
+      ctx = Context.new([Message.user("Hello"), msg])
+
+      ctx = ContextSerializer.update_streaming_content(ctx, nil, "Let me ")
+      ctx = ContextSerializer.update_streaming_content(ctx, nil, "think...")
+
+      last_msg = List.last(ctx.messages)
+      assert last_msg.metadata.streaming_thinking == "Let me think..."
+    end
+
+    test "accumulates both content and thinking" do
+      msg = ContextSerializer.streaming_assistant_message()
+      ctx = Context.new([Message.user("Hello"), msg])
+
+      ctx = ContextSerializer.update_streaming_content(ctx, "Hello", "Thinking")
+
+      last_msg = List.last(ctx.messages)
+      assert last_msg.metadata.streaming_content == "Hello"
+      assert last_msg.metadata.streaming_thinking == "Thinking"
+    end
+
+    test "returns unchanged context if last message is not streaming" do
+      ctx = Context.new([Message.user("Hello"), Message.assistant("Hi")])
+
+      updated = ContextSerializer.update_streaming_content(ctx, "More content")
+
+      assert updated == ctx
+    end
+  end
+
+  describe "finalize_streaming_message/3" do
+    test "replaces streaming placeholder with parsed content" do
+      msg = ContextSerializer.streaming_assistant_message()
+      ctx = Context.new([Message.user("Hello"), msg])
+      ctx = ContextSerializer.update_streaming_content(ctx, "raw content", nil)
+
+      final_ctx = ContextSerializer.finalize_streaming_message(ctx, %{reply: "Hello!"})
+
+      last_msg = List.last(final_ctx.messages)
+      assert last_msg.content == %{reply: "Hello!"}
+      refute Map.has_key?(last_msg.metadata, :streaming)
+      refute Map.has_key?(last_msg.metadata, :streaming_content)
+      refute Map.has_key?(last_msg.metadata, :streaming_thinking)
+    end
+
+    test "preserves thinking in final metadata" do
+      msg = ContextSerializer.streaming_assistant_message()
+      ctx = Context.new([Message.user("Hello"), msg])
+
+      final_ctx = ContextSerializer.finalize_streaming_message(ctx, %{reply: "Hi"}, "My thinking")
+
+      last_msg = List.last(final_ctx.messages)
+      assert last_msg.metadata.thinking == "My thinking"
+    end
+
+    test "returns unchanged context if last message is not streaming" do
+      ctx = Context.new([Message.user("Hello"), Message.assistant("Hi")])
+
+      updated = ContextSerializer.finalize_streaming_message(ctx, %{new: "content"})
+
+      assert updated == ctx
+    end
+  end
+
+  describe "streaming?/1" do
+    test "returns true when last message is streaming" do
+      msg = ContextSerializer.streaming_assistant_message()
+      ctx = Context.new([Message.user("Hello"), msg])
+
+      assert ContextSerializer.streaming?(ctx) == true
+    end
+
+    test "returns false when last message is not streaming" do
+      ctx = Context.new([Message.user("Hello"), Message.assistant("Hi")])
+
+      assert ContextSerializer.streaming?(ctx) == false
+    end
+
+    test "returns false for empty context" do
+      ctx = Context.new([])
+
+      assert ContextSerializer.streaming?(ctx) == false
+    end
+  end
+
+  describe "get_streaming_content/1" do
+    test "returns accumulated content and thinking" do
+      msg = ContextSerializer.streaming_assistant_message()
+      ctx = Context.new([Message.user("Hello"), msg])
+      ctx = ContextSerializer.update_streaming_content(ctx, "content", "thinking")
+
+      result = ContextSerializer.get_streaming_content(ctx)
+
+      assert result == %{content: "content", thinking: "thinking"}
+    end
+
+    test "returns nil when not streaming" do
+      ctx = Context.new([Message.user("Hello"), Message.assistant("Hi")])
+
+      assert ContextSerializer.get_streaming_content(ctx) == nil
+    end
+  end
 end
