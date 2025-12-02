@@ -23,6 +23,11 @@ defmodule AshAgentSession.DSL.Session do
         type: :atom,
         default: :context,
         doc: "The attribute name for storing the serialized context map."
+      ],
+      status_attribute: [
+        type: :atom,
+        doc:
+          "The attribute name for storing session status (:pending, :running, :completed, :failed)."
       ]
     ]
   }

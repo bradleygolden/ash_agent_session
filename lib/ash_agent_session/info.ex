@@ -20,16 +20,31 @@ defmodule AshAgentSession.Info do
   end
 
   @doc """
+  Get the status attribute name for a session-enabled resource.
+
+  Returns `nil` if no status attribute is configured.
+
+  ## Examples
+
+      iex> AshAgentSession.Info.status_attribute(MyApp.ChatAgent)
+      :status
+  """
+  def status_attribute(resource) do
+    Extension.get_opt(resource, [:agent_session], :status_attribute, nil)
+  end
+
+  @doc """
   Get the full session configuration for a resource.
 
   ## Examples
 
       iex> AshAgentSession.Info.session_config(MyApp.ChatAgent)
-      %{context_attribute: :context}
+      %{context_attribute: :context, status_attribute: nil}
   """
   def session_config(resource) do
     %{
-      context_attribute: context_attribute(resource)
+      context_attribute: context_attribute(resource),
+      status_attribute: status_attribute(resource)
     }
   end
 end

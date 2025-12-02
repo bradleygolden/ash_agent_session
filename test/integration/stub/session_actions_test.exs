@@ -4,6 +4,7 @@ defmodule AshAgentSession.Integration.Stub.SessionActionsTest do
 
   alias AshAgentSession.LLMStub
   alias AshAgentSession.Test.SessionAgent
+  alias AshAgentSession.Test.SessionAgentWithStatus
   alias AshAgentSession.Test.SessionAgentWithTemplate
 
   describe "start_session" do
@@ -227,6 +228,88 @@ defmodule AshAgentSession.Integration.Stub.SessionActionsTest do
       assert %{message: "Hello"} in contents
       assert %{message: "Can you help me?"} in contents
       assert %{message: "Thank you"} in contents
+    end
+  end
+
+  describe "status_attribute lifecycle" do
+    test "start_session sets status to completed on success" do
+      Req.Test.stub(AshAgentSession.LLMStub, LLMStub.object_response(%{"reply" => "Hello!"}))
+
+      {:ok, session} =
+        SessionAgentWithStatus
+        |> Ash.Changeset.for_create(:start_session, %{input: %{message: "Hi"}})
+        |> Ash.create()
+
+      assert session.status == :completed
+    end
+
+    test "continue_session sets status to completed on success" do
+      Req.Test.stub(AshAgentSession.LLMStub, LLMStub.object_response(%{"reply" => "First"}))
+
+      {:ok, session} =
+        SessionAgentWithStatus
+        |> Ash.Changeset.for_create(:start_session, %{input: %{message: "First message"}})
+        |> Ash.create()
+
+      assert session.status == :completed
+
+      Req.Test.stub(AshAgentSession.LLMStub, LLMStub.object_response(%{"reply" => "Second"}))
+
+      {:ok, updated_session} =
+        session
+        |> Ash.Changeset.for_update(:continue_session, %{input: %{message: "Second message"}})
+        |> Ash.update()
+
+      assert updated_session.status == :completed
+    end
+
+    test "start_session sets status to failed on agent error" do
+      Req.Test.stub(AshAgentSession.LLMStub, LLMStub.error_response())
+
+      result =
+        SessionAgentWithStatus
+        |> Ash.Changeset.for_create(:start_session, %{input: %{message: "Hi"}})
+        |> Ash.create()
+
+      assert {:error, _} = result
+
+      [session] = Ash.read!(SessionAgentWithStatus)
+      assert session.status == :failed
+    end
+
+    test "continue_session sets status to failed on agent error" do
+      Req.Test.stub(AshAgentSession.LLMStub, LLMStub.object_response(%{"reply" => "First"}))
+
+      {:ok, session} =
+        SessionAgentWithStatus
+        |> Ash.Changeset.for_create(:start_session, %{input: %{message: "First message"}})
+        |> Ash.create()
+
+      assert session.status == :completed
+
+      Req.Test.stub(AshAgentSession.LLMStub, LLMStub.error_response())
+
+      result =
+        session
+        |> Ash.Changeset.for_update(:continue_session, %{input: %{message: "Second message"}})
+        |> Ash.update()
+
+      assert {:error, _} = result
+
+      [failed_session] = Ash.read!(SessionAgentWithStatus)
+      assert failed_session.status == :failed
+    end
+
+    test "works without status_attribute configured (backwards compatible)" do
+      Req.Test.stub(AshAgentSession.LLMStub, LLMStub.object_response(%{"reply" => "Hello!"}))
+
+      {:ok, session} =
+        SessionAgent
+        |> Ash.Changeset.for_create(:start_session, %{input: %{message: "Hi"}})
+        |> Ash.create()
+
+      assert session.id != nil
+      refute Map.has_key?(session, :status)
     end
   end
 end
