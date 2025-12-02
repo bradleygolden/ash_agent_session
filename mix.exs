@@ -64,6 +64,9 @@ defmodule AshAgentSession.MixProject do
   defp aliases do
     [
       precommit: [
+        &set_hex_deps/1,
+        "deps.get",
+        "deps.unlock --unused",
         "compile --warnings-as-errors",
         "test --warnings-as-errors",
         "format --check-formatted",
@@ -71,9 +74,18 @@ defmodule AshAgentSession.MixProject do
         "sobelow",
         "deps.audit",
         "dialyzer",
-        "docs --warnings-as-errors"
+        "docs --warnings-as-errors",
+        &unset_hex_deps/1
       ]
     ]
+  end
+
+  defp set_hex_deps(_) do
+    System.put_env("HEX_DEPS", "true")
+  end
+
+  defp unset_hex_deps(_) do
+    System.put_env("HEX_DEPS", "")
   end
 
   defp description do
